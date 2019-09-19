@@ -2,12 +2,12 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: TTbar_13TeV_TuneCUETP8M1_cfi --conditions auto:run2_mc -n 10 --eventcontent RECOSIM -s GEN,SIM,DIGI,L1,DIGI2RAW,RAW2DIGI,RECO --datatier GEN-SIM-RAW-RECO --fileout file:step1.root --no_exec
+# with command line options: step2 --conditions auto:phase1_2018_design -n 10 --eventcontent RECOSIM -s RAW2DIGI,RECO --datatier RECO --era Run2_2018 --beamspot GaussSigmaZ4cm --geometry DB:Extended --fileout file:step2.root --no_exec
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO')
+process = cms.Process('RECO',eras.Run2_2018)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -16,15 +16,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
-process.load('Configuration.Geometry.GeometrySimDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
-process.load('Configuration.StandardSequences.Generator_cff')
-process.load('IOMC.EventVertexGenerators.VtxSmearedRealistic50ns13TeVCollision_cfi')
-process.load('GeneratorInterface.Core.genFilterSummary_cff')
-process.load('Configuration.StandardSequences.SimIdeal_cff')
-process.load('Configuration.StandardSequences.Digi_cff')
-process.load('Configuration.StandardSequences.SimL1Emulator_cff')
-process.load('Configuration.StandardSequences.DigiToRaw_cff')
 process.load('Configuration.StandardSequences.RawToDigi_cff')
 process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
@@ -35,7 +27,10 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 # Input source
-process.source = cms.Source("EmptySource")
+process.source = cms.Source("PoolSource",
+    fileNames = cms.untracked.vstring('file:step1_405.root'),
+    secondaryFileNames = cms.untracked.vstring()
+)
 
 process.options = cms.untracked.PSet(
 
@@ -43,10 +38,12 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('singleMuonGun nevts:10'),
+    annotation = cms.untracked.string('singleMuongun step 2 nevts:10'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
+
+# Output definition
 
 fullRECO = False
 if (fullRECO == True):
@@ -104,107 +101,33 @@ else:
     )
 # ******************************************************************************
 
-
-
-# Output definition
-
 process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
-    SelectEvents = cms.untracked.PSet(
-        SelectEvents = cms.vstring('generation_step')
-    ),
     dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('GEN-SIM-RAW-RECO'),
+        dataTier = cms.untracked.string('RECO'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string('file:step1.root'),
-    outputCommands = outputEventContent, #process.RECOSIMEventContent.outputCommands,
+    fileName = cms.untracked.string('file:step2.root'),
+    outputCommands = outputEventContent,
     splitLevel = cms.untracked.int32(0)
 )
+
 
 # Additional output definition
 
 # Other statements
-process.genstepfilter.triggerConditions=cms.vstring("generation_step")
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
-'''
-process.generator = cms.EDFilter("Pythia8GeneratorFilter",
-    PythiaParameters = cms.PSet(
-        parameterSets = cms.vstring(
-            'pythia8CommonSettings', 
-            'pythia8CUEP8M1Settings', 
-            'processParameters'
-        ),
-        processParameters = cms.vstring(
-            'Top:gg2ttbar = on ', 
-            'Top:qqbar2ttbar = on ', 
-            '6:m0 = 175 '
-        ),
-        pythia8CUEP8M1Settings = cms.vstring(
-            'Tune:pp 14', 
-            'Tune:ee 7', 
-            'MultipartonInteractions:pT0Ref=2.4024', 
-            'MultipartonInteractions:ecmPow=0.25208', 
-            'MultipartonInteractions:expPow=1.6'
-        ),
-        pythia8CommonSettings = cms.vstring(
-            'Tune:preferLHAPDF = 2', 
-            'Main:timesAllowErrors = 10000', 
-            'Check:epTolErr = 0.01', 
-            'Beams:setProductionScalesFromLHEF = off', 
-            'SLHA:keepSM = on', 
-            'SLHA:minMassSM = 1000.', 
-            'ParticleDecays:limitTau0 = on', 
-            'ParticleDecays:tau0Max = 10', 
-            'ParticleDecays:allowPhotonRadiation = on'
-        )
-    ),
-    comEnergy = cms.double(13000.0),
-    filterEfficiency = cms.untracked.double(1.0),
-    maxEventsToPrint = cms.untracked.int32(0),
-    pythiaHepMCVerbosity = cms.untracked.bool(False),
-    pythiaPylistVerbosity = cms.untracked.int32(0)
-)
-'''
-process.generator = cms.EDProducer("SingleMuonGun",
-  Verbosity = cms.untracked.int32(30),  # 1  - print begin and end of event
-                                       # 10 - print type of gun (constant or spectrum)
-                                       # 20 - print muon parameters (q, pt, eta, phi)
-                                       # 30 - print CMSSW event info
-  # IMPORTANT! *****************************************************************
-  ConstPt_eq_MinPt = cms.bool(False), # if TRUE  then generate muons with CONSTANT pT = MinPt
-                                      # if FALSE then generate muons with pT spectrum of muons as in 2012 data (hardcoded in SingleMuonGun/plugins/SingleMuonGun.cc)
-  # ****************************************************************************
-  MinPt  = cms.double(1000.0),
-  MaxPt  = cms.double(200.0),
-  MinEta = cms.double(-2.5),
-  MaxEta = cms.double(2.5),
-  MinPhi = cms.double(-3.14159265359),
-  MaxPhi = cms.double(3.14159265359)
-)
-
-
-process.ProductionFilterSequence = cms.Sequence(process.generator)
+process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2018_realistic_Candidate_2019_08_20_21_34_02', '')
 
 # Path and EndPath definitions
-process.generation_step = cms.Path(process.pgen)
-process.simulation_step = cms.Path(process.psim)
-process.digitisation_step = cms.Path(process.pdigi)
-process.L1simulation_step = cms.Path(process.SimL1Emulator)
-process.digi2raw_step = cms.Path(process.DigiToRaw)
 process.raw2digi_step = cms.Path(process.RawToDigi)
 process.reconstruction_step = cms.Path(process.reconstruction)
-process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.RECOSIMoutput_step = cms.EndPath(process.RECOSIMoutput)
 
 # Schedule definition
-process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary_step,process.simulation_step,process.digitisation_step,process.L1simulation_step,process.digi2raw_step,process.raw2digi_step,process.reconstruction_step,process.endjob_step,process.RECOSIMoutput_step)
+process.schedule = cms.Schedule(process.raw2digi_step,process.reconstruction_step,process.endjob_step,process.RECOSIMoutput_step)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
-# filter all path with the production filter sequence
-for path in process.paths:
-	getattr(process,path)._seq = process.ProductionFilterSequence * getattr(process,path)._seq 
 
 
 # Customisation from command line

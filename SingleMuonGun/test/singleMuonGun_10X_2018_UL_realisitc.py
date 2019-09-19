@@ -2,12 +2,12 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: TTbar_13TeV_TuneCUETP8M1_cfi --conditions auto:phase1_2018_design -n 10 --eventcontent RECOSIM -s GEN,SIM,DIGI,L1,DIGI2RAW,RAW2DIGI,RECO --datatier GEN-SIM-RAW-RECO --era Run2_2018 --beamspot GaussSigmaZ4cm --geometry DB:Extended --fileout file:step1.root --no_exec
+# with command line options: TTbar_13TeV_TuneCUETP8M1_cfi --conditions auto:phase1_2018_design -n 10 --eventcontent RAWSIM -s GEN,SIM,DIGI,L1,DIGI2RAW --datatier GEN-SIM-RAW --era Run2_2018 --beamspot GaussSigmaZ4cm --geometry DB:Extended --fileout file:step1.root --no_exec
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.Run2_2018)
+process = cms.Process('DIGI2RAW',eras.Run2_2018)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -25,8 +25,6 @@ process.load('Configuration.StandardSequences.SimIdeal_cff')
 process.load('Configuration.StandardSequences.Digi_cff')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('Configuration.StandardSequences.DigiToRaw_cff')
-process.load('Configuration.StandardSequences.RawToDigi_cff')
-process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
@@ -43,80 +41,26 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('TTbar_13TeV_TuneCUETP8M1_cfi nevts:10'),
+    annotation = cms.untracked.string('singleMuonGun step 1 nevts:10'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
 
-
-fullRECO = False
-if (fullRECO == True):
-  print "WARNING! Output format: FULL RECO"
-  outputEventContent = process.RECOEventContent.outputCommands
-  oututFileName = cms.untracked.string('singleMuonGun_FullRECO.root')
-else:
-  print "WARNING! Output format: REDUCED RECO aka ALCARECO"
-  oututFileName = cms.untracked.string('singleMuonGun_ReducedRECO.root')
-  outputEventContent = cms.untracked.vstring('drop *', 
-      # Keep all type of muons
-      'keep *_muons_*_*',
-#      'keep *_muonsFromCosmics_*_*',
-#      'keep *_muonsFromCosmics1Leg_*_*',
-      # Keep general tracks
-      'keep *_generalTracks_*_*',
-      # Keep muon tracks
-      'keep *_globalMuons_*_*',
-      'keep *_standAloneMuons_*_*',
-#      'keep *_refittedStandAloneMuons_*_*',
-#      'keep *_displacedStandAloneMuons_*_*',
-#      'keep *_standAloneSETMuons_*_*',
-#`      'keep *_globalSETMuons_*_*',
-#      'keep *_tevMuons_*_*',
-#      'keep *_cosmicMuons_*_*',
-#      'keep *_cosmicMuons1Leg_*_*',
-#      'keep *_globalCosmicMuons_*_*',
-#      'keep *_globalCosmicMuons1Leg_*_*',
-      # Keep all muon hits information
-      'keep *_muonCSCDigis_*_*',
-      'keep *_muonDTDigis_*_*',
-      'keep *_muonRPCDigis_*_*',
-      'keep *_dt1DRecHits_*_*',
-      'keep *_dt2DSegments_*_*',
-      'keep *_dt4DSegments_*_*',
-      'keep *_csc2DRecHits_*_*',
-      'keep *_cscSegments_*_*',
-      'keep *_rpcRecHits_*_*',
-      # Keep tracker hits information
-      'keep SiPixelClusteredmNewDetSetVector_siPixelClusters_*_*',
-      'keep SiStripClusteredmNewDetSetVector_siStripClusters_*_*',
-      # Keep trigger information
-      'keep *_TriggerResults_*_*',
-      'keep L1AcceptBunchCrossings_*_*_*',
-      'keep L1GlobalTriggerReadoutRecord_gtDigis_*_*',
-      # Keep DCS information
-      'keep DcsStatuss_scalersRawToDigi_*_*',
-      # Keep beam spot and vertices
-      'keep *_offlineBeamSpot_*_*',
-      'keep *_offlinePrimaryVertices_*_*',
-      # Keep generator level information
-      'keep *_genParticles_*_*',
-      'keep *_generator_*_*',
-      'drop edmHepMCProduct_generator_*_*',
-    )
-# ******************************************************************************
-
 # Output definition
 
-process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
+process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
     SelectEvents = cms.untracked.PSet(
         SelectEvents = cms.vstring('generation_step')
     ),
+    compressionAlgorithm = cms.untracked.string('LZMA'),
+    compressionLevel = cms.untracked.int32(9),
     dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('GEN-SIM-RAW-RECO'),
+        dataTier = cms.untracked.string('GEN-SIM-RAW'),
         filterName = cms.untracked.string('')
     ),
+    eventAutoFlushCompressedSize = cms.untracked.int32(20971520),
     fileName = cms.untracked.string('file:step1.root'),
-    outputCommands = outputEventContent,
+    outputCommands = process.RAWSIMEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
 
@@ -126,7 +70,7 @@ process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
 process.XMLFromDBSource.label = cms.string("Extended")
 process.genstepfilter.triggerConditions=cms.vstring("generation_step")
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_design', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2018_realistic_Candidate_2019_08_20_21_34_02', '')
 
 process.generator = cms.EDProducer("SingleMuonGun",
   Verbosity = cms.untracked.int32(00),  # 1  - print begin and end of event
@@ -145,7 +89,6 @@ process.generator = cms.EDProducer("SingleMuonGun",
   MaxPhi = cms.double(3.14159265359)
 )
 
-
 process.ProductionFilterSequence = cms.Sequence(process.generator)
 
 # Path and EndPath definitions
@@ -154,14 +97,12 @@ process.simulation_step = cms.Path(process.psim)
 process.digitisation_step = cms.Path(process.pdigi)
 process.L1simulation_step = cms.Path(process.SimL1Emulator)
 process.digi2raw_step = cms.Path(process.DigiToRaw)
-process.raw2digi_step = cms.Path(process.RawToDigi)
-process.reconstruction_step = cms.Path(process.reconstruction)
 process.genfiltersummary_step = cms.EndPath(process.genFilterSummary)
 process.endjob_step = cms.EndPath(process.endOfProcess)
-process.RECOSIMoutput_step = cms.EndPath(process.RECOSIMoutput)
+process.RAWSIMoutput_step = cms.EndPath(process.RAWSIMoutput)
 
 # Schedule definition
-process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary_step,process.simulation_step,process.digitisation_step,process.L1simulation_step,process.digi2raw_step,process.raw2digi_step,process.reconstruction_step,process.endjob_step,process.RECOSIMoutput_step)
+process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary_step,process.simulation_step,process.digitisation_step,process.L1simulation_step,process.digi2raw_step,process.endjob_step,process.RAWSIMoutput_step)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
 # filter all path with the production filter sequence
@@ -170,10 +111,6 @@ for path in process.paths:
 
 
 # Customisation from command line
-
-#Have logErrorHarvester wait for the same EDProducers to finish as those providing data for the OutputModule
-from FWCore.Modules.logErrorHarvester_cff import customiseLogErrorHarvesterUsingOutputCommands
-process = customiseLogErrorHarvesterUsingOutputCommands(process)
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
